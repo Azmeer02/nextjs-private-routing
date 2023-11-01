@@ -1,60 +1,59 @@
 "use client";
 
-// import { NextResponse } from "next/server";
-
-// const protectedRoutes = {
-//   "/events": "AMBASSADOR",
-//   "/landing-page": "USER",
-// };
-
-// export function middleware(req) {
-//   const userCookie = req.cookies.get("user");
-
-//   // If the route is a protected route
-//   if (protectedRoutes[req.nextUrl.pathname]) {
-//     // If cookie does not exist or does not match the required role for that route
-//     if (!userCookie || userCookie.value !== protectedRoutes[req.nextUrl.pathname]) {
-//       const absoluteURL = new URL("/", req.nextUrl.origin);
-//       return NextResponse.redirect(absoluteURL.toString());
-//     }
-//   }
-// }
-
 import { NextResponse } from "next/server";
+import { db } from "./firebase";
+import { doc, getDoc } from "firebase/firestore";
 
 const protectedRoutes = {
   "/events": "AMBASSADOR",
   "/landing-page": "USER",
 };
 
-// Define the default landing pages for each role
-const defaultLandingPages = {
+const roleBasedLandingPages = {
   AMBASSADOR: "/events",
   USER: "/landing-page",
 };
 
-export function middleware(req) {
-  const userCookie = req.cookies.get("user");
+export async function middleware(req) {
+  const userCookie = req.cookies.get("userID");
 
-  // If the route is a protected route
-  if (protectedRoutes[req.nextUrl.pathname]) {
-    // If cookie does not exist or does not match the required role for that route
-    if (
-      !userCookie ||
-      userCookie.value !== protectedRoutes[req.nextUrl.pathname]
-    ) {
-      // Redirect to the default landing page for the user's role
-      if (userCookie && defaultLandingPages[userCookie.value]) {
-        const redirectURL = new URL(
-          defaultLandingPages[userCookie.value],
-          req.nextUrl.origin
-        );
-        return NextResponse.redirect(redirectURL.toString());
+  if (protectedRoutes[req.nextUrl.pathname] && !userCookie) {
+    const loginURL = new URL("/", req.nextUrl.origin);
+    return NextResponse.redirect(loginURL.toString());
+  }
+
+  if (userCookie) {
+    try {
+      const userRef = doc(db, "Emails_WebApp", userCookie?.value);
+      const userSnap = await getDoc(userRef);
+
+      if (userSnap.exists()) {
+        const userData = userSnap.data();
+        const userRole = userData?.role;
+
+        if (req.nextUrl.pathname === "/") {
+          const redirectURL = new URL(
+            roleBasedLandingPages[userRole] || "/",
+            req.nextUrl.origin
+          );
+          return NextResponse.redirect(redirectURL.toString());
+        }
+
+        if (protectedRoutes[req.nextUrl.pathname]) {
+          // If cookie does not exist or does not match the required role for that route
+          if (userRole !== protectedRoutes[req.nextUrl.pathname]) {
+            const redirectURL = new URL(
+              roleBasedLandingPages[userRole] || "/",
+              req.nextUrl.origin
+            );
+            return NextResponse.redirect(redirectURL.toString());
+          }
+        }
       } else {
-        // If no user role cookie is found or it's not a known role, redirect to the root path
-        const absoluteURL = new URL("/", req.nextUrl.origin);
-        return NextResponse.redirect(absoluteURL.toString());
+        console.log("user is logged out");
       }
+    } catch (error) {
+      console.log("🚀 ~ error:", error);
     }
   }
 }

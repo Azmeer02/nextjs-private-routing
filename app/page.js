@@ -34,7 +34,7 @@ export default function Home() {
                   emailVerified: res?.user?.emailVerified,
                   ...userSnap.data(),
                 };
-                Cookies.set("user", userData?.role);
+                Cookies.set("userID", res?.user?.uid);
                 switch (userData?.role) {
                   case "USER":
                     router.push("/landing-page");
