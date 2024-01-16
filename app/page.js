@@ -8,12 +8,22 @@ import { auth, db } from "../firebase";
 import { CloseOutlined } from "@ant-design/icons";
 import { doc, getDoc } from "firebase/firestore";
 import Cookies from "js-cookie";
+import { useQuery } from "@apollo/client";
+import { getServerUptime } from "@/graphql/queries";
 
 export default function Home() {
   const [form] = Form.useForm();
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [page, setPage] = useState(true);
+
+  const { data: user, loading: getServerUptimeLoading } = useQuery(
+    getServerUptime,
+    {
+      variables: { id: 1 },
+    }
+  );
+  console.log("🚀 ~ user:", user);
 
   const onFinish = async (values) => {
     const { email, password } = values;

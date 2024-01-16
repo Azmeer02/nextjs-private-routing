@@ -40,7 +40,6 @@ export async function middleware(req) {
         }
 
         if (protectedRoutes[req.nextUrl.pathname]) {
-          // If cookie does not exist or does not match the required role for that route
           if (userRole !== protectedRoutes[req.nextUrl.pathname]) {
             const redirectURL = new URL(
               roleBasedLandingPages[userRole] || "/",
